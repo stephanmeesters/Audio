@@ -386,7 +386,7 @@ class AudioAnalyzeFFT4096 : public AudioStream
 {
 public:
 	AudioAnalyzeFFT4096() : AudioStream(1, inputQueueArray),
-	  state(0), outputflag(false) {
+	  state(0), outputflag(false), samplingRatioDiv(1), blockCounter(0), bHalfSample(false) {
 		//arm_cfft_radix4_init_q15(&fft_inst, 1024, 0, 1);
 	}
 	bool available() {
@@ -396,9 +396,10 @@ public:
 		}
 		return false;
 	}
-	float read(unsigned int binNumber) {
+	float read(q15_t binNumber) {
 		if (binNumber > 2047) return 0.0;						// half FFT size
-		return (float)(output[binNumber]) * (1.0 / 16384.0);
+		Serial.println((int)(output[binNumber]));
+		return (float)(output[binNumber]);// * (1.0 / 16384.0);
 	}
 	float read(unsigned int binFirst, unsigned int binLast) {
 		if (binFirst > binLast) {
@@ -421,12 +422,48 @@ public:
 	{
 		bWindowFunction = b;
 	}
+	void samplingRatioDivider(int d)
+	{
+		samplingRatioDiv = d;
+		Serial.print("max frequency: ");
+		Serial.print(44100/samplingRatioDiv);
+		Serial.print(" frequency step: ");
+		Serial.print((44100/samplingRatioDiv) / 4096.0);
+		Serial.print(" samples per block: ");
+		Serial.println(AUDIO_BLOCK_SAMPLES);
+	}
+	void halfSampling(bool b)
+	{
+			bHalfSample = b;
+	}
+	void WipeBuffer()
+	{
+		state = 0;
+		outputflag = false;
+		blockCounter = 0;
+	}
 	float peakFrequency()
 	{
 		uint32_t testIndex = 0;
 		q15_t maxValue;
+		Serial.print("Max value: ");
+		Serial.println((int)(maxValue));
+		Serial.print(output[28]);
 		arm_max_q15(output, 2048, &maxValue, &testIndex);		// half FFT size
-		return testIndex * 44100 / 4096.0;						// full FFT size
+		Serial.print( "testindex: ");
+		Serial.print(testIndex);
+		Serial.print(" value at max: ");
+		Serial.println(output[testIndex]);
+		
+		if(bHalfSample)
+		{
+			return testIndex * (44100/2) / 4096.0;						// full FFT size
+		}
+		else
+		{
+			return testIndex * (44100) / 4096.0;						// full FFT size
+		}
+		
 	}
 	
 	virtual void update(void);
@@ -439,6 +476,9 @@ private:
 	volatile bool outputflag;
 	audio_block_t *inputQueueArray[1];
 	bool bWindowFunction;
+	int samplingRatioDiv;
+	int blockCounter;
+	bool bHalfSample;
 };
 
 #endif

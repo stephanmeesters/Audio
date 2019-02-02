@@ -31,13 +31,23 @@
 
 
 // 140312 - PAH - slightly faster copy
-static void copy_to_fft_buffer(void *destination, const void *source)
+static void copy_to_fft_buffer(void *destination, const void *source, bool bHalfSample)
 {
 	const uint16_t *src = (const uint16_t *)source;
 	uint32_t *dst = (uint32_t *)destination;
 
-	for (int i=0; i < AUDIO_BLOCK_SAMPLES; i++) {
-		*dst++ = *src++;  // real sample plus a zero for imaginary
+	if(bHalfSample)
+	{
+		for (int i=0; i < AUDIO_BLOCK_SAMPLES; i+=2) {
+			*dst++ = *src++;  // real sample plus a zero for imaginary
+		}	
+	}
+	else
+	{
+		for (int i=0; i < AUDIO_BLOCK_SAMPLES; i++) {
+			*dst++ = *src++;  // real sample plus a zero for imaginary
+			
+		}
 	}
 }
 
@@ -55,6 +65,8 @@ static void apply_window_to_fft_buffer(void *buffer)
 
 }
 
+
+
 void AudioAnalyzeFFT4096::update(void)
 {
 	audio_block_t *block;
@@ -71,30 +83,56 @@ void AudioAnalyzeFFT4096::update(void)
 #if defined(KINETISK)
 
 	// build up buffer to twice the FFT window length
-	if(state < 31)
+	if((bHalfSample && state < 63) || (!bHalfSample && state < 31))
 	{
-		copy_to_fft_buffer(buffer+state*0x100, block);
-		state++;
+		//if(blockCounter % samplingRatioDiv == 0)
+		//{
+		if(bHalfSample)
+		{
+			copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES, block, bHalfSample);
+		}
+		else
+		{
+			copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES*2, block, bHalfSample);
+		}
+			state++;
+		//}
+		//else
+		//{
+		//	
+		//}
+		//blockCounter++;
+		//Serial.println(state);
 	}
 	
 	// buffer filled, process
-	else
+	else if(!outputflag)
 	{
 		//blocklist[state] = block;
+		//Serial.println("buffer filled");
 		
-		copy_to_fft_buffer(buffer+state*0x100, block);
+		if(bHalfSample)
+		{
+			copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES, block, bHalfSample);
+		}
+		else
+		{
+			copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES*2, block, bHalfSample);
+		}
+		
+		//////
 		
 		if (bWindowFunction) apply_window_to_fft_buffer(buffer);
 		
 		//arm_rfft_q15(&arm_rfft_sR_q15_len4096, buffer, output);
 		arm_cfft_q15(&arm_cfft_sR_q15_len4096, buffer, 0, 1);
-		arm_cmplx_mag_q15(buffer, output, 2048);			// full fft size
+		arm_cmplx_mag_q15(buffer, output, 2048);			// half fft size
 
 		outputflag = true;
 		
-		arm_copy_q15(buffer+16*0x100, buffer, 4096); // half FFT size
+		//arm_copy_q15(buffer+32*AUDIO_BLOCK_SAMPLES, buffer, 4096); // half FFT size
 		
-		state = 16;
+		//state = 32;
 		
 	}
 

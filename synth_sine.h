@@ -38,7 +38,7 @@
 class AudioSynthWaveformSine : public AudioStream
 {
 public:
-	AudioSynthWaveformSine() : AudioStream(0, NULL), magnitude(16384) {}
+	AudioSynthWaveformSine() : AudioStream(0, NULL), magnitude(16384), _offset(0) {}
 	void frequency(float freq) {
 		if (freq < 0.0) freq = 0.0;
 		else if (freq > AUDIO_SAMPLE_RATE_EXACT/2) freq = AUDIO_SAMPLE_RATE_EXACT/2;
@@ -57,11 +57,17 @@ public:
 		else if (n > 1.0) n = 1.0;
 		magnitude = n * 65536.0;
 	}
+	void offset(float n) {
+		if (n < 0) n = 0;
+		else if (n > 1.0) n = 1.0;
+		_offset = n * 65536.0;
+	}
 	virtual void update(void);
 private:
 	uint32_t phase_accumulator;
 	uint32_t phase_increment;
 	int32_t magnitude;
+	int32_t _offset;
 };
 
 
