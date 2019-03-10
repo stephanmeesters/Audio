@@ -87,15 +87,17 @@ void AudioAnalyzeFFT4096::update(void)
 	{
 		//if(blockCounter % samplingRatioDiv == 0)
 		//{
-		if(bHalfSample)
-		{
-			copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES, block, bHalfSample);
-		}
-		else
-		{
-			copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES*2, block, bHalfSample);
-		}
-			state++;
+		//if(bHalfSample)
+		//{
+			//copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES, block, bHalfSample);
+		//	arm_copy_q15(buffer+state*AUDIO_BLOCK_SAMPLES, buffer, 4096);
+		//}
+		//else
+		//{
+		//arm_copy_q15((const uint16_t *)block, buffer+state*AUDIO_BLOCK_SAMPLES, AUDIO_BLOCK_SAMPLES);
+			//copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES*2, block, bHalfSample);
+		//}
+			
 		//}
 		//else
 		//{
@@ -103,36 +105,55 @@ void AudioAnalyzeFFT4096::update(void)
 		//}
 		//blockCounter++;
 		//Serial.println(state);
+		copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES, block, false);
+		state++;
 	}
 	
 	// buffer filled, process
 	else if(!outputflag)
 	{
 		//blocklist[state] = block;
-		//Serial.println("buffer filled");
+		Serial.println("buffer filled");
 		
-		if(bHalfSample)
-		{
-			copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES, block, bHalfSample);
-		}
-		else
-		{
-			copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES*2, block, bHalfSample);
-		}
+		//if(bHalfSample)
+		//{
+		//	copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES, block, bHalfSample);
+		//}
+		//else
+		//{
+			copy_to_fft_buffer(buffer+state*AUDIO_BLOCK_SAMPLES, block, false);
+		//}
 		
 		//////
 		
+		//arm_copy_q15((const uint16_t *)block, buffer+state*AUDIO_BLOCK_SAMPLES, AUDIO_BLOCK_SAMPLES);
+		
 		if (bWindowFunction) apply_window_to_fft_buffer(buffer);
 		
-		//arm_rfft_q15(&arm_rfft_sR_q15_len4096, buffer, output);
-		arm_cfft_q15(&arm_cfft_sR_q15_len4096, buffer, 0, 1);
-		arm_cmplx_mag_q15(buffer, output, 2048);			// half fft size
+		arm_rfft_instance_q15 fft;
+		if(arm_rfft_init_q15(&fft, 4096, 0, 1) != ARM_MATH_SUCCESS)
+		{
+			Serial.println("error");
+		}
+		
+		arm_rfft_q15(&fft, buffer, output);
+		// for(int i = 0; i<4096; i++)
+		// {
+			// Serial.print("input: ");
+			// Serial.print(buffer[i]);
+			// Serial.print(" output: ");
+			// Serial.println(output[i]);
+		// }
+		//arm_cmplx_mag_q15(buffer2, output, 2048);			// half fft size
 
 		outputflag = true;
+		state = 0;
 		
 		//arm_copy_q15(buffer+32*AUDIO_BLOCK_SAMPLES, buffer, 4096); // half FFT size
 		
 		//state = 32;
+		
+		Serial.println("FFT done");
 		
 	}
 

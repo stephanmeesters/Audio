@@ -398,7 +398,7 @@ public:
 	}
 	float read(q15_t binNumber) {
 		if (binNumber > 2047) return 0.0;						// half FFT size
-		Serial.println((int)(output[binNumber]));
+		//Serial.println((int)(output[binNumber]));
 		return (float)(output[binNumber]);// * (1.0 / 16384.0);
 	}
 	float read(unsigned int binFirst, unsigned int binLast) {
@@ -444,16 +444,16 @@ public:
 	}
 	float peakFrequency()
 	{
-		uint32_t testIndex = 0;
-		q15_t maxValue;
-		Serial.print("Max value: ");
-		Serial.println((int)(maxValue));
-		Serial.print(output[28]);
-		arm_max_q15(output, 2048, &maxValue, &testIndex);		// half FFT size
-		Serial.print( "testindex: ");
-		Serial.print(testIndex);
-		Serial.print(" value at max: ");
-		Serial.println(output[testIndex]);
+		 uint32_t testIndex = 0;
+		 q15_t maxValue;
+		// Serial.print("Max value: ");
+		// Serial.println((int)(maxValue));
+		// Serial.print(output[28]);
+		 arm_max_q15(output, 4096, &maxValue, &testIndex);		// half FFT size
+		 Serial.print( "testindex: ");
+		 Serial.print(testIndex);
+		 Serial.print(" value at max: ");
+		 Serial.println(output[testIndex]);
 		
 		if(bHalfSample)
 		{
@@ -467,11 +467,12 @@ public:
 	}
 	
 	virtual void update(void);
-	int16_t output[2048] __attribute__ ((aligned (4)));		// half FFT size
+	int16_t output[4096] __attribute__ ((aligned (4)));		// half FFT size
 private:
 	void init(void);
 	audio_block_t *blocklist[32];
-	int16_t buffer[8192] __attribute__ ((aligned (4)));			// double FFT size
+	int16_t buffer[4096] __attribute__ ((aligned (4)));			// double FFT size
+	//int16_t buffer2[8192] __attribute__ ((aligned (4)));			// double FFT size
 	uint8_t state;
 	volatile bool outputflag;
 	audio_block_t *inputQueueArray[1];
